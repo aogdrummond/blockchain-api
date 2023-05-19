@@ -4,30 +4,32 @@ import mysql.connector
 from dotenv import load_dotenv
 load_dotenv()
 
-mydb = mysql.connector.connect(host=os.environ.get("DB_HOST"), 
-                               user=os.environ.get("DB_USER"), 
-                               password=os.environ.get("DB_PASSWORD"),
-                               database=os.environ.get("DB_NAME"))
-cursor = mydb.cursor()
-
 class DbCursor:
 
-    def __init__(self) -> None:
+    def __init__(self,host,user,password,database) -> None:
 
-        self.cursor = cursor
+        self.connect(host,user,password,database)
+
+    def connect(self,host,user,password,database):
+
+        self.mydb = mysql.connector.connect(host=host, 
+                                        user=user, 
+                                        password=password,
+                                        database=database)
+        self.cursor = self.mydb.cursor()
 
     def persist_on_database(self,address:str,crypto:str):
         query = "INSERT INTO crypto_address (address, crypto_currency) "
         query += f"VALUES ('{address}','{crypto}')"
         self.cursor.execute(query)
-        mydb.commit()
+        self.mydb.commit()
         return 
     
     def list_all_addresses(self):
 
         query = "SELECT address FROM crypto_address "
         self.cursor.execute(query)
-        response = cursor.fetchall()
+        response = self.cursor.fetchall()
         if response:
             return tools.flatten_list(response)
     
@@ -36,7 +38,7 @@ class DbCursor:
         query = "SELECT address FROM crypto_address "
         query += f"WHERE id = {id}"
         self.cursor.execute(query)
-        response = cursor.fetchall()
+        response = self.cursor.fetchall()
         if response:
             return response[0][0]
     
