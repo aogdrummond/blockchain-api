@@ -2,9 +2,15 @@
 Manter esse trecho genérico para que possa chamar mysql
 elasticsearch ou o que seja...
 """
+import os
+from dotenv import load_dotenv
 from db_mysql import DbCursor
+load_dotenv()
 
-cursor = DbCursor()
+cursor = DbCursor(host=os.environ.get("DB_HOST"),
+                  user=os.environ.get("DB_USER") ,
+                  password=os.environ.get("DB_PASSWORD"),
+                  database=os.environ.get("DB_NAME"))
 
 def persist_address(address:str,crypto_currency):
 
