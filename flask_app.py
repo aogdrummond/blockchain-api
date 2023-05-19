@@ -68,5 +68,4 @@ def retrieve_address(address_id: str) -> str:
 
 if __name__ == "__main__":
     port = int(os.environ.get("API_PORT"))
-    host = os.environ.get("API_HOST")
-    app.run(host=host, port=port)
+    app.run(port=port,debug=True)
