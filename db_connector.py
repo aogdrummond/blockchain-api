@@ -12,12 +12,12 @@ cursor = DbCursor(host=os.environ.get("DB_HOST"),
                   password=os.environ.get("DB_PASSWORD"),
                   database=os.environ.get("DB_NAME"))
 
-def persist_address(address:str,crypto_currency):
+def persist_address_on_db(address:str,crypto_currency):
 
     cursor.persist_on_database(address,crypto_currency) 
     return "Return message of success of not"
 
-def list_addresses()->list:
+def list_addresses_from_db()->list:
 
     addresses = cursor.list_all_addresses()
     return addresses

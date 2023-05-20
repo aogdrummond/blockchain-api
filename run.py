@@ -1,14 +1,12 @@
 import os
 from flask import Flask, jsonify, request
 from dotenv import load_dotenv
-from db_connector import persist_address, list_addresses, retrieve_address_from_id
-from cryptography import generate_address_to_crypto
+from controller import generate_address_to_crypto, list_addresses, retrieve_address, persist_address
 from flask_restx import Api, Resource
 
 load_dotenv()
 app = Flask(__name__)
 api = Api(app, title = "Blockchain API", version="1.0",prefix="/api-blockchain")
-api.namespace="Teste"
 
 @api.route("/")
 class HelloWorld(Resource):
@@ -26,7 +24,7 @@ class HelloWorld(Resource):
 class GenerateAddress(Resource):
     def post(self):
         """
-        Generates an address for the given cryptocurrency, accordig to the proper method
+        Generates an address for the given cryptocurrency, according to the proper method
         applied in each case.
 
         Request Body:
@@ -72,7 +70,7 @@ class RetrieveAddress(Resource):
             str: The retrieved address.
         """
         
-        address = retrieve_address_from_id(address_id)
+        address = retrieve_address(address_id)
         if address:
             return {"address": address}
         else:

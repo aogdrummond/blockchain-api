@@ -11,23 +11,6 @@ SEED = 42
 logger = logging.getLogger()
 logger.setLevel("INFO")
 
-
-def generate_address_to_crypto(crypto_symbol: str) -> str:
-    """
-    Generates an address for the given cryptocurrency symbol.
-
-    Args:
-        crypto_symbol (str): The cryptocurrency symbol.
-
-    Returns:
-        str: The generated address for the given cryptocurrency.
-    """
-    crypto_symbol = crypto_symbol.upper()
-    key_parser = KeyManager()
-    encrypter = CurrenciesEncrypter()
-    return encrypter.generate_address(crypto_symbol, key_parser.private_key)
-
-
 class KeyManager:
     """
     Manages the private key for encryption.
