@@ -4,13 +4,13 @@ from unittest import mock
 class TestKeyManager:
 
     def test_initialize_private_key_with_existing_key(self,key_manager):
-        with mock.patch("cryptography.aws.recover_from_s3") as mock_recover:
+        with mock.patch("cryptography.key_vault.recover_from_s3") as mock_recover:
             mock_recover.return_value = "existing_key"
             private_key = key_manager.initialize_private_key()
             assert private_key == "existing_key"
 
     def test_initialize_private_key_without_existing_key(self,key_manager):
-        with mock.patch("cryptography.aws.recover_from_s3") as mock_recover, \
+        with mock.patch("cryptography.key_vault.recover_from_s3") as mock_recover, \
                 mock.patch("cryptography.KeyManager.generate_private_key") as mock_generate:
             mock_recover.return_value = None
             mock_generate.return_value = "new_key"
@@ -18,20 +18,20 @@ class TestKeyManager:
             assert private_key == "new_key"
 
     def test_recover_private_key(self,key_manager):
-        with mock.patch("cryptography.aws.recover_from_s3") as mock_recover:
+        with mock.patch("cryptography.key_vault.recover_from_s3") as mock_recover:
             mock_recover.return_value = "existing_key"
             private_key = key_manager.recover_private_key()
             assert private_key == "existing_key"
 
     def test_generate_private_key(self,key_manager):
-        with mock.patch("cryptography.aws.persist_on_s3") as mock_persist:
+        with mock.patch("cryptography.key_vault.persist_on_s3") as mock_persist:
             mock_persist.return_value = None
             private_key = key_manager.generate_private_key()
             print(f"Key {private_key}")
             assert private_key is not None
 
     def test_persist_private_key(self,key_manager):
-        with mock.patch("cryptography.aws.persist_on_s3") as mock_persist:
+        with mock.patch("cryptography.key_vault.persist_on_s3") as mock_persist:
             key_manager.persist_private_key("private_key")
             mock_persist.assert_called_once_with("private_key")
             #asserts that "persist_on_s3" was called one time, and with "private_key"
