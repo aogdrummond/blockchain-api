@@ -2,7 +2,7 @@ import hashlib
 import random
 import uuid
 import logging
-import aws_connector as aws
+import key_vault
 from string import ascii_letters
 from Crypto.Hash import keccak
 
@@ -59,7 +59,7 @@ class KeyManager:
         Returns:
             str: The recovered private key if it exists in the S3 bucket, otherwise None.
         """
-        private_key = aws.recover_from_s3()
+        private_key = key_vault.recover_from_s3()
         return private_key
 
     def generate_private_key(self) -> str:
@@ -83,7 +83,7 @@ class KeyManager:
         Args:
             private_key (str): The private key to persist.
         """
-        aws.persist_on_s3(private_key)
+        key_vault.persist_on_s3(private_key)
         
 class CurrenciesEncrypter:
     def __init__(self):
