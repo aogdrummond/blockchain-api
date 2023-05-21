@@ -1,9 +1,11 @@
 boto3==1.26.135
 botocore==1.29.135
+coincurve==18.0.0
 Flask==2.3.2
 flask_restx==1.1.0
 mysql_connector_repackaged==0.3.1
-pycryptodome==3.17
+pysha3==1.0.2
 pytest==7.3.1
 python-dotenv==1.0.0
 Requests==2.30.0
+tools==0.1.9

@@ -1,12 +1,18 @@
 import os
 from flask import Flask, jsonify, request
 from dotenv import load_dotenv
-from controller import generate_address_to_crypto, list_addresses, retrieve_address, persist_address
+from controller import (
+    generate_address_to_crypto,
+    list_addresses,
+    retrieve_address,
+    persist_address,
+)
 from flask_restx import Api, Resource
 
 load_dotenv()
 app = Flask(__name__)
-api = Api(app, title = "Blockchain API", version="1.0",prefix="/api-blockchain")
+api = Api(app, title="Blockchain API", version="1.0", prefix="/api-blockchain")
+
 
 @api.route("/")
 class HelloWorld(Resource):
@@ -69,13 +75,12 @@ class RetrieveAddress(Resource):
         Returns:
             str: The retrieved address.
         """
-        
+
         address = retrieve_address(address_id)
         if address:
             return {"address": address}
         else:
-            print("teste")
-            return {"error": "Address not found"}, 404
+            return {"error": "Address Id not found"}, 404
 
 
 if __name__ == "__main__":
