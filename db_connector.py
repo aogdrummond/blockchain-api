@@ -1,8 +1,5 @@
 import os
-from dotenv import load_dotenv
 from db_mysql import DbCursor
-
-load_dotenv()
 
 cursor = DbCursor(
     host=os.environ.get("DB_HOST"),

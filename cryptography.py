@@ -1,3 +1,4 @@
+import json
 import random
 import logging
 import hashlib
@@ -51,7 +52,8 @@ class KeyManager:
             str: The recovered private key if it exists in the S3 bucket, otherwise an empty string.
         """
         private_keys = key_vault.recover_from_s3()
-        private_key = private_keys.get(crypto_currency, "")
+        private_keys = json.loads(private_keys) if private_keys else {}
+        private_key = private_keys.get(crypto_currency)
         return private_key
 
     def generate_private_key(self, crypto_currency: Optional[str] = None) -> str:
@@ -87,7 +89,11 @@ class KeyManager:
             private_key (str): The private key to persist.
             crypto_currency (str): The symbol of the cryptocurrency.
         """
-        key_vault.persist_on_s3(private_key, crypto_currency)
+        saved_keys = key_vault.recover_from_s3()
+        saved_keys = json.loads(saved_keys) if saved_keys else {}
+        saved_keys[crypto_currency] = private_key
+        saved_keys = json.dumps(saved_keys)
+        key_vault.persist_on_s3(saved_keys)
 
 class CurrenciesEncrypter:
     def __init__(self, seed: Optional[int] = None) -> None:

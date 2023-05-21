@@ -1,9 +1,6 @@
+import json
 import mysql.connector
 from typing import List
-from dotenv import load_dotenv
-
-load_dotenv()
-
 
 class DbCursor:
     def __init__(self, host: str, user: str, password: str, database: str) -> None:
@@ -76,6 +73,43 @@ class DbCursor:
         if response:
             return response[0][0]
 
+    def retrieve_private_key(self):
+        query = "SELECT private_key FROM priv_keys "
+        self.cursor.execute(query)
+        response = self.cursor.fetchall()
+        if response:
+            return response[0][0]
+        
+        return {}
+
+    def persist_private_key(self,private_key:str):
+        query = "SELECT id, private_key FROM priv_keys "
+        self.cursor.execute(query)
+        response = self.cursor.fetchall()
+        print(response)
+        update = False
+        if response:
+            saved_key = json.loads(response[0][1])
+            adding_key = json.loads(private_key)
+            for crypto_key in adding_key:
+                if crypto_key not in list(saved_key.keys()):
+                    update = True
+        if update:
+            _id = response[0][0]
+            query = "UPDATE priv_keys "
+            query +=f"SET private_key='{private_key}' "
+            query +=f"WHERE id = {_id}"
+            print(query)
+            self.cursor.execute(query)
+            self.mydb.commit()
+        
+        else:
+            query = f"INSERT INTO priv_keys (private_key) "
+            query += f"VALUES ('{private_key}')"
+            print(query)
+            self.cursor.execute(query)
+            self.mydb.commit()
+            return
 
 def flatten_list(original_list: List[List]) -> List:
     """
