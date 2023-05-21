@@ -1,21 +1,12 @@
+import os
 from controller import generate_address_to_crypto, list_addresses, retrieve_address, persist_address
 import json
 
 def lambda_handler(event, context):
-
-    data = json.loads(event["body"])
-    crypto_currency = data.get("crypto_currency")
-    if crypto_currency:
-        address = generate_address_to_crypto(crypto_currency)
-        persist_address(address, crypto_currency)
-        
-        return {
-        'statusCode': 201,
-        'body': json.dumps({"address": address})
-    }
+    print(f"Event {event}")
+    address_id = int(event['pathParameters']['address_id'])
+    address = retrieve_address(address_id)
+    if address:
+        return {"address": address}
     else:
-        return {
-            'statusCode': 400,
-            'body': json.dumps('Hello from Lambda!')
-        }
-
+        return {"error": f"Address Id {address_id} not found"}, 400
