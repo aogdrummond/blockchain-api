@@ -1,93 +1,103 @@
-import hashlib
 import random
-import uuid
 import logging
-import aws_connector as aws
+import hashlib
+import key_vault
+from typing import Optional
+from sha3 import keccak_256
+from secrets import token_bytes
+from coincurve import PublicKey
 from string import ascii_letters
-from Crypto.Hash import keccak
-
-SEED = 42
 
 logger = logging.getLogger()
 logger.setLevel("INFO")
 
 
-def generate_address_to_crypto(crypto_symbol: str) -> str:
-    """
-    Generates an address for the given cryptocurrency symbol.
-
-    Args:
-        crypto_symbol (str): The cryptocurrency symbol.
-
-    Returns:
-        str: The generated address for the given cryptocurrency.
-    """
-    crypto_symbol = crypto_symbol.upper()
-    key_parser = KeyManager()
-    encrypter = CurrenciesEncrypter()
-    return encrypter.generate_address(crypto_symbol, key_parser.private_key)
-
-
 class KeyManager:
-    """
-    Manages the private key for encryption.
+    def __init__(self, crypto_symbol: str, seed: Optional[int] = None) -> None:
+        """
+        Initializes a KeyManager object.
 
-    This encapsulation allows dealing with the private key in an isolated manner,
-    enabling the creation or retrieval of the key independently of the user.
-    """
-    def __init__(self):
-        random.seed(SEED)
-        self.private_key: str = self.initialize_private_key()
+        Args:
+            crypto_symbol (str): The symbol of the cryptocurrency.
+            seed (int, optional): Seed for the random number generator. Defaults to None.
+        """
+        random.seed(seed)
+        self.private_key: str = self.initialize_private_key(crypto_symbol)
 
-    def initialize_private_key(self) -> str:
+    def initialize_private_key(self, crypto_symbol: str) -> str:
         """
         Initializes the private key.
+
+        Args:
+            crypto_symbol (str): The symbol of the cryptocurrency.
 
         Returns:
             str: The initialized private key.
         """
-        private_key = self.recover_private_key()
+        private_key = self.recover_private_key(crypto_symbol)
         if private_key:
             return private_key
         else:
-            return self.generate_private_key()
+            return self.generate_private_key(crypto_symbol)
 
-    def recover_private_key(self) -> str:
+    def recover_private_key(self, crypto_currency: str) -> str:
         """
         Recovers the private key from the S3 bucket.
 
+        Args:
+            crypto_currency (str): The symbol of the cryptocurrency.
+
         Returns:
-            str: The recovered private key if it exists in the S3 bucket, otherwise None.
+            str: The recovered private key if it exists in the S3 bucket, otherwise an empty string.
         """
-        private_key = aws.recover_from_s3()
+        private_keys = key_vault.recover_from_s3()
+        private_key = private_keys.get(crypto_currency, "")
         return private_key
 
-    def generate_private_key(self) -> str:
+    def generate_private_key(self, crypto_currency: Optional[str] = None) -> str:
         """
         Generates a random private key.
 
+        Args:
+            crypto_currency (str, optional): The symbol of the cryptocurrency. Defaults to None.
+
         Returns:
             str: The generated private key.
+        
+        Raises:
+            ValueError: If the cryptocurrency symbol is invalid.
         """
         length = random.randint(0, 100)
         dummy_str = "".join([random.choice(ascii_letters) for _ in range(length)])
-        private_key = hashlib.sha256(str(dummy_str).encode()).hexdigest()
-        self.persist_private_key(private_key)
+        if crypto_currency in ["ETH", "TRO"]:
+            private_key = hashlib.sha256(str(dummy_str).encode()).hexdigest()
+        elif crypto_currency == "BTC":
+            private_key = keccak_256(token_bytes(32)).digest().hex()
+        else:
+            raise ValueError("Invalid cryptocurrency")
+        self.persist_private_key(private_key, crypto_currency)
         logger.warning("Fresh private key created.")
         return private_key
 
-    def persist_private_key(self, private_key: str):
+    def persist_private_key(self, private_key: str, crypto_currency: str) -> None:
         """
         Persists the private key in the S3 bucket.
 
         Args:
             private_key (str): The private key to persist.
+            crypto_currency (str): The symbol of the cryptocurrency.
         """
-        aws.persist_on_s3(private_key)
-        
+        key_vault.persist_on_s3(private_key, crypto_currency)
+
 class CurrenciesEncrypter:
-    def __init__(self):
-        random.seed(SEED)
+    def __init__(self, seed: Optional[int] = None) -> None:
+        """
+        Initializes a CurrenciesEncrypter object.
+
+        Args:
+            seed (int, optional): Seed for the random number generator. Defaults to None.
+        """
+        random.seed(seed)
 
     def generate_address(self, crypto_symbol: str, private_key: str) -> str:
         """
@@ -103,9 +113,9 @@ class CurrenciesEncrypter:
         crypto_mapping = {
             "BTC": self.bitcoin_generator,
             "ETH": self.ethereum_generator,
-            "TRO": self.tron_generator
+            "TRO": self.tron_generator,
         }
-        
+
         generate_address = crypto_mapping[crypto_symbol]
         return generate_address(private_key)
 
@@ -121,11 +131,11 @@ class CurrenciesEncrypter:
         """
         prefix = random.choice(["1", "3", "bc1"])
         length = random.randint(25, 34)
-        generated_hash = hashlib.sha256("".join([private_key, prefix, length.__str__()]).encode()).hexdigest()
+        generated_hash = hashlib.sha256(private_key.encode()).hexdigest()
         public_key = self.trim_bitcoin_key(prefix + generated_hash[-length:])
         logger.info("Bitcoin address generated.")
         return public_key
-        
+
     def trim_bitcoin_key(self, public_key: str) -> str:
         """
         Trims the Bitcoin address if it exceeds the maximum length or adds missing characters if it's too short.
@@ -140,7 +150,9 @@ class CurrenciesEncrypter:
             trimmed_key = public_key[:35]
         elif len(public_key) < 26:
             missing_chars = 26 - len(public_key)
-            trimmed_key = public_key + "".join([random.choice(ascii_letters) for _ in range(missing_chars)])
+            trimmed_key = public_key + "".join(
+                [random.choice(ascii_letters) for _ in range(missing_chars)]
+            )
         else:
             return public_key
         return trimmed_key
@@ -155,14 +167,12 @@ class CurrenciesEncrypter:
         Returns:
             str: The generated Ethereum address.
         """
-        k = keccak.new(digest_bits=256)
-        random_id = uuid.uuid1().__str__()
-        hashed_str = "".join([private_key, random_id])
-        k.update(hashed_str.encode('utf-8'))
-        hash = k.hexdigest().encode('utf-8').hex()
-        public_key = "".join(["0x", hash])
+        public_key = PublicKey.from_valid_secret(private_key.encode()).format(
+            compressed=False)[1:]
+        address = keccak_256(public_key).digest()
+        address = "0x" + address[-20:].hex()
         logger.info("Ethereum address generated.")
-        return public_key
+        return address
 
     def tron_generator(self, private_key: str) -> str:
         """
@@ -174,11 +184,9 @@ class CurrenciesEncrypter:
         Returns:
             str: The generated Tron address.
         """
-        k = keccak.new(digest_bits=256)
-        random_id = uuid.uuid1().__str__()
-        hashed_str = "".join([private_key, random_id])
-        k.update(hashed_str.encode('utf-8'))
-        hash = k.hexdigest().encode('utf-8')[-20:].hex()
-        public_key = "".join(["41", hash])
+        public_key = PublicKey.from_valid_secret(private_key.encode()).format(
+            compressed=False)[1:]
+        address = keccak_256(public_key).digest()[-20:].hex()
+        address = "41" + address
         logger.info("Tron address generated.")
-        return public_key
+        return address
